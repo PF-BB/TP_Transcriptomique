@@ -1,0 +1,183 @@
+---
+title: "Graphes : points, lignes et couleurs"
+subtitle: "Rapide Introduction à R"
+author: "Vincent Guillemot & Justine Guégan"
+date: "Mercredi 9 sept. 2015"
+output: ioslides_presentation
+---
+
+## La commande `plot`
+
+Syntaxe : `plot(objet, ...)` !
+
+Paramètre | Role 
+----------|------
+`main`    | Titre du graphe
+`xlab` & `ylab` | Titres des axes
+`xlim` & `ylim` | Etendues des axes
+`type` | Type de graphe : points, lignes etc...
+`col` | La couleur, par exemple "black", "red", "green"...
+
+L'objet en question peut etre : une fonction, une `data.frame`, une matrice, une liste, une formule ou... tout autre objet auquel aura été associé une méthode représentation graphique.
+
+## Exercice 1
+
+Appliquez `plot` à une fonction de votre choix! 
+
+Par exemple, une fonction "sigmoide" :
+
+\[
+ f(x) = \begin{cases} e^x -1 \text{ si } x \leq 0 \\ 1 - e^{-x}  \text{ si } x > 0\end{cases}
+\]
+
+## Exercice 2
+
+A l'aide des fonctions `plot` et `grid`, reproduisez le graphe suivant :
+
+![image](graf1.png)
+
+## Ajouter des `points`, des `lines` ou une fonction
+
+On peut ajouter à un graphe existant d'autres graphes avec 
+
+ * la fonction `points` pour ajouter des points,
+ * la fonction `lines` pour ajouter des lignes,
+ * la fonction `plot(f, add=TRUE, ...)` pour ajouter le graphe d'une fonction.
+
+## Exercice
+
+ 1. Construisez un jeu de données simulées à deux variables liées par un certain modèle (par exemple un modèle linéaire). Préférablement, les observations que vous créerez seront bruitées.
+ 2. Représentez ces données sous la forme de *points* à l'aide de la fonction `plot`.
+ 3. Puis ajoutez à votre graphe le modèle à l'aide de la fonction `lines` ou `plot`.
+
+## Exercice
+
+Après avoir entré les commandes `set.seed(123)` et `x <- rnorm(100)`, reproduisez le graphe suivant :
+
+![image](graf2.png)
+
+
+## Couleurs, pointillés, symboles et épaisseur
+
+4 paramètres importants :
+
+ * `pch` : pour pouvoir choisir le symbole du point (cercle, triangle, etc.),
+ * `lty` : (_line type_) pour choisir le type de pointillés utilisé,
+ * `col` : (_color_) pour choisir la couleur,
+ * `lwd` : (_line width_) pour choisir l'épaisseur.
+
+Ces paramètres acceptent des valeurs numériques.
+
+`pch` et `col` acceptent des chaînes de caractères.
+
+## Exercice
+
+`pch` peut admettre une lettre comme argument : expérimentez pour obtenir une figure _*approchant*_ de la figure suivante 
+
+![image](graf3.png)
+
+## Exercice
+
+ 1. Déclarez une fonction `f` qui dépend à la fois de `x` et d'un paramètre `m`. Par exemple  \[f(x, m) = \sin(x + m)\] (mais ce n'est pas une obligation).
+ 2. Représentez sur le meme graphe plusieurs courbes représentant `f` avec plusieurs valeurs possibles du paramètre. Ces courbes devront toutes avoir des couleurs (`col`), des styles (`lty`) et des épaisseurs (`lwd`) différentes. 
+
+## Ajouter une légende...
+
+... avec la fonction `legend`, à appeler après avoir produit un graphique.
+
+Argument | Signification
+--|--
+`x`, `y` | Position de la légende...
+`legend` | Le texte de la légende.
+``bty` | Type de cadre = `"o"` (avec un cadre autour) ou `"n"` (sans cadre autour).
+
+## Exercice
+
+Vous voulez ajoutez une légnde à votre graphe 
+```
+plot(1:10, type="b", col="steelblue", lwd=2)
+```
+.
+
+ 1. Ajoutez une légende au point de coordonnées $(1,7)$.
+ 2. Ajoutez la légende au coin en haut à gauche, sans cadre.
+ 3. Ajoutez la légende où vous voulez avec `locator(1)`.
+
+## Exercice
+
+Reproduisez le plus fidèlement possible le graphe suivant.
+
+![image](graf4.png)
+
+
+## Représentation avec `matplot`...
+
+... pour représenter plusieurs lignes / nuages de points à la fois, sans avoir à utiliser `points` ou `lines`.
+
+ 1. On l'utilise sur une matrice
+ 2. et on a besoin généralement pour l'utiliser de *palettes* de couleurs ...
+ 
+... comme cela est montré dans l'exemple suivant, tiré de l'aide de la fonction
+
+```
+sines <- outer(1:20, 1:4, function(x, y) sin(x / 20 * pi * y))
+matplot(sines, pch = 1:4, type = "o", col = rainbow(ncol(sines)))
+```
+
+
+## Exercice
+
+Reproduisez le plus fidèlement possible le graphe suivant (le même que précédemment), mais avec la fonction `matplot` !
+
+![image](graf4.png)
+
+
+## Faire des mosaiques...
+
+... c'est facile avec la fonction `layout`!
+
+ 1. On déclare le `layout`, qui est une matrice indiquant comment positionner les graphes les uns par rapport aux autres.
+ 2. On `plot` ensuite les graphes dans l'ordre 
+
+Par exemple
+
+```{r, eval=F}
+x <- rnorm(100) # On va se servir de ces données
+M <- rbind(1, 2:3) # La mosaique contiendra 3 graphes
+layout(M)  # On déclare le layout et on le "remplit" avec
+plot(x)    # 1 ...
+hist(x)    # 2 ...
+boxplot(x) # et 3 graphes
+```
+
+## Voici le layout que nous avons décidé d'utiliser...
+
+```{r, echo=FALSE}
+x <- rnorm(100) # On va se servir de ces données
+M <- rbind(1, 2:3) # La mosaique contiendra 3 graphes
+layout(M)
+layout.show(3)
+```
+
+
+## Et voici le résultat...
+
+```{r, echo=F}
+x <- rnorm(100) # On va se servir de ces données
+M <- rbind(1, 2:3) # La mosaique contiendra 3 graphes
+layout(M)  # On déclare le layout et on le "remplit" avec
+plot(x)    # 1 ...
+hist(x)    # 2 ...
+boxplot(x) # et 3 graphes
+```
+
+
+## Conclusion
+
+Il y a énormément de paramètres graphiques que l'on peut modifier, on ne peut pas tous les connaitre par coeur.
+
+On peut cependant les consulter en appelant l'aide de la fonction `par` : `?par`.
+
+> _Parfois, ce qui parait etre un simple détail peut prendre des heures à modifier en utilisant des paramètres graphique !_
+
+

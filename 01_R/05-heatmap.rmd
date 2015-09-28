@@ -1,0 +1,121 @@
+---
+title: "Graphes : heatmaps et dimensions supplémentaires"
+subtitle: "Rapide Introduction à R"
+author: "Vincent Guillemot"
+date: "Mercredi 9 sept. 2015"
+output: ioslides_presentation
+---
+
+## Représenter des données rectangulaires...
+
+... que l'on peut concevoir sous la forme de matrices ou de tableaux est très utile dans certains cas.
+
+Les procédures utilisées pour représenter de telles données sont sensiblement différentes de celles que nous avons déjà vues.
+
+La question est : comment vais-je pouvoir représenter graphiquement la matrice suivante...
+
+```{r, echo=F}
+x <- 1:7
+mx <- mean(x)
+M <- outer(x, x, function(i, j) (i-mx)**2 + (j-mx)**2)
+rownames(M) <- x
+colnames(M) <- x
+```
+
+
+## ... que voici
+
+```{r, echo=FALSE, warning=FALSE}
+knitr::kable(M, row.names=x)
+```
+
+## `image`
+
+```{r}
+image(M)
+```
+
+## `heatmap`
+
+```{r}
+heatmap(M)
+```
+
+## `pheatmap`
+
+```{r, message=FALSE}
+require(pheatmap)
+pheatmap(M)
+```
+
+
+## Echelles de Couleurs
+
+Ceci est directement inspiré de l'aide :
+
+```{r, echo=FALSE}
+##------ Some palettes ------------
+demo.pal <-
+  function(n, border = if (n < 32) "light gray" else NA,
+           main = paste("color palettes;  n=", n),
+           ch.col = c("rainbow(n, start=.7, end=.1)", "heat.colors(n)",
+                      "terrain.colors(n)", "topo.colors(n)",
+                      "cm.colors(n)"))
+{
+    nt <- length(ch.col)
+    i <- 1:n; j <- n / nt; d <- j/6; dy <- 2*d
+    plot(i, i+d, type = "n", yaxt = "n", ylab = "", main = main)
+    for (k in 1:nt) {
+        rect(i-.5, (k-1)*j+ dy, i+.4, k*j,
+             col = eval(parse(text = ch.col[k])), border = border)
+        text(2*j,  k * j + dy/4, ch.col[k])
+    }
+}
+n <- if(.Device == "postscript") 64 else 16
+     # Since for screen, larger n may give color allocation problem
+demo.pal(n)
+```
+
+## Exercice
+
+ 1. Choisissez ou créez votre palette de couleurs.
+ 2. Choisissez votre méthode pour représenter `M`.
+ 3. Testez l'adéquation entre palette et couleur sur trois tailles de matrices :
+   * Petite ($7 \times 7$),
+   * Moyenne ($29 \times 29$),
+   * Grande ($613 \times 613$).
+
+## Diagramme en 3D
+
+L'utilisation de diagramme en 3D est dangereuse, mais tellement séduisante !
+
+```{r}
+persp(x, x, M)
+```
+
+## Retour en 2D
+
+Qu'il est facile de considérer les graphes en 3D de haut !
+
+```{r}
+contour(x, x, M)
+```
+
+## Conclusion
+
+Encore une fois, nous voyons que R nous propose une variété immense de représentations graphiques.
+
+Nous allons voir pendant les travaux pratiques comment nous allons pouvoir mettre à contribution cet incroyable arsenal de méthodes pour l'analyse de données.
+
+## Bonus : sauvegarder un graphe
+
+```{r, eval=FALSE}
+pdf("chemin_du_plot.pdf")
+plot(1:10, type="b")
+dev.off()
+```
+
+Pour connaître tous les formats de sauvegarde `?Devices` : 
+
+ > `pdf`, `postscript`, `xfig`, `bitmap`, ..., `png`, `svg`, `tiff` etc.
+

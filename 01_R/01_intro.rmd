@@ -1,0 +1,109 @@
+---
+title: "RIR <br> "
+subtitle: "Rapide Introduction à R"
+author: "Vincent Guillemot"
+date: "Mardi 8 sept. 2015"
+output: ioslides_presentation
+---
+
+## But de la Formation
+
+ - Utilisation du logiciel R
+```{r}
+x <- rnorm(100)
+mean(x)
+var(x)
+```
+ - Comment ajuster des modèles linéaires en R.
+
+
+
+## Biostatistique
+
+### 1. Estimation
+ 
+```{r estimation, echo=FALSE}
+X <- data.frame(a=c(rnorm(50,1),rnorm(50,3)), b=factor(rep(1:2,e=50)))
+boxplot(X$a, border = "steelblue", lwd=2, horizontal=TRUE, xlab="Mesures")
+```
+
+## Biostatistique
+
+### 2. Tests d'hypothèses
+
+```{r test, echo=FALSE}
+boxplot(a ~ b, data = X, border = "steelblue", lwd=2, horizontal=TRUE, las=1, xlab="Mesures")
+```
+
+## Biostatistique
+
+### 3. Modèles linéaires
+ 
+```{r modele_lineaire, echo=FALSE}
+x <- rnorm(100)
+y <- -2*x + 0.8*rnorm(100)
+plot(x, y, col="steelblue", pch=16)
+abline(lm(y~x), col="grey", lwd=3)
+grid()
+```
+
+## Comprehensive R Archive Network -- CRAN
+ 
+ 
+http://cran.r-project.org/
+
+![CRAN](../images/logo_R.png)
+
+## R Studio
+
+http://www.rstudio.com
+
+![RStudio](../images/RStudio-Ball.png)
+
+## R Markdown
+
+``` ### Titre de paragraphe ```
+```Générer un échantillon aléatoire de taille 100, ```
+```puis calculer sa moyenne : ```
+```{r, eval=FALSE, verbatim = TRUE}
+x <- rnorm(100)
+mean(x)
+```
+
+## R Markdown
+
+### Titre de paragraphe
+
+Générer un échantillon aléatoire de taille 100,
+puis calculer sa moyenne :
+
+```{r}
+x <- rnorm(100)
+mean(x)
+```
+
+## DataJoy
+
+Pour rendre les exercices interactifs, nous allons utiliser DataJoy!
+
+https://www.getdatajoy.com
+
+
+
+
+
+## Supports de cours -- GitHub
+
+https://github.com/PF-BB/RIR
+
+![GitHub](../images/notocat.jpg)
+
+## Ressources pédagogiques
+
+Des liens vers des ressources seront ajoutés au fur et à mesure sur le mini-site de la formation :  
+
+<center> <font size="10"> http://pf-bb.github.io/RIR/ </font> </a> </center>
+
+# Let's go!
+
+![Roomba](../images/roomba.gif)
