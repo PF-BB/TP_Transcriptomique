@@ -1,5 +1,7 @@
-# setwd("~/Enseignements/TP-Génomique-Marie-Anne")
-PATHDATA <- "~/Enseignements/TP-Génomique-Marie-Anne/data"
+require(convert)
+require(marray)
+
+PATHDATA <- "~/Enseignements/TP-Genomique-Marie-Anne/data"
 
 l <- read.table(text="ID:NLINE:TERM
 I1D_1_3.gpr:110:Block
@@ -40,19 +42,18 @@ data1@maGnames <- galinfo$gnames
 data2@maGnames <- galinfo$gnames
 data <- cbind(data1, data2)
 
-plot(data[,1], zvar=NULL)
+good <- rowSums(data@maW)==0
+dat <- data[good, ]
 
-# sum(rowSums(data@maW)==0)
-# good <- rowSums(data@maW)==0
-# plot(data[good, 1])
-
-dat <- data
 datnorm <- maNorm(dat, norm="printTipLoess", subset=TRUE)
 
+layout(1:2)
+plot(dat[,1], zvar=NULL)
 plot(datnorm[,1], zvar=NULL)
 
-boxplot(datnorm)
+layout(1:2)
 boxplot(dat)
+boxplot(datnorm)
 
 dat_rglist <- as(dat, "RGList")
 datnorm_malist <- as(datnorm, "MAList")
@@ -65,3 +66,5 @@ for (i in 1:24){
   dev.off()
 }
 
+# Dye swap
+pheno <- read.csv(file.path(PATHDATA, "pheno.txt"), stringsAsFactors = FALSE)
