@@ -1,5 +1,5 @@
-setwd("~/Bureau/TP-Génomique-Marie-Anne")
-PATHDATA <- "~/Bureau/TP-Génomique-Marie-Anne/data_output_genepix"
+# setwd("~/Enseignements/TP-Génomique-Marie-Anne")
+PATHDATA <- "~/Enseignements/TP-Génomique-Marie-Anne/data"
 
 l <- read.table(text="ID:NLINE:TERM
 I1D_1_3.gpr:110:Block
@@ -28,7 +28,7 @@ I3P_2_3.gpr:110:Block
 I3P_2_5.gpr:110:Block", sep=":", header=TRUE, stringsAsFactors=F)
 ids <- split(l$ID, l$NLINE)
 
-galinfo <- read.Galfile(galfile = "AWS.gal", path="~/Bureau/TP-Génomique-Marie-Anne/", skip = 133)
+galinfo <- read.Galfile(galfile = "AWS.gal", path=PATHDATA, skip = 133)
 data1 <- read.GenePix(fnames = ids[[1]], path = PATHDATA, skip = as.numeric(names(ids)[1])-1, 
                       name.Gb=NULL, name.Rb=NULL)
 data2 <- read.GenePix(fnames = ids[[2]], path = PATHDATA, skip = as.numeric(names(ids)[2])-1, 
