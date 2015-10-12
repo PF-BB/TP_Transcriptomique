@@ -43,9 +43,9 @@ Pour chaque état P ou D, une extraction d'ARN a été faites pour 3 individus d
 
 ## 1. Lecture d'un fichier de données
 
-> **Question** : Quelle commande peut-on utiliser pour charger en mémoire le fichier "data_???.txt" ? Expliquez chacune des options utilisée.
+> **Question** : Chargez en mémoire les fichiers "data_1.txt", "data_2.txt", "data_3.txt", "data_4.txt" et "pheno.txt" ? Expliquez chacune des options utilisée.
 
-```{r chargement_donnees echo=FALSE}
+```{r chargement_donnees, echo=FALSE}
 require(convert)
 require(marray)
 
@@ -94,16 +94,91 @@ data <- cbind(data1, data2)
 
 > **Question** : Quel est la classe de l'objet chargé en mémoire et quelles en sont les dimensions ?
 
-```{r classe_dim echo=TRUE}
-(class(data))
-(dim(data))
+```{r classe_dim, echo=TRUE}
+good <- rowSums(data@maW)==0
+dat <- data[good, ]
 
+my_R <- dat@maRf
+colnames(my_R) <- gsub("~/Enseignements/TP-Genomique-Marie-Anne/data/", "", colnames(my_R))
+colnames(my_R) <- gsub(".gpr", "", colnames(my_R))
+rownames(my_R) <- labels
+
+my_G <- dat@maGf
+colnames(my_G) <- gsub("~/Enseignements/TP-Genomique-Marie-Anne/data/", "", colnames(my_G))
+colnames(my_G) <- gsub(".gpr", "", colnames(my_G))
+rownames(my_G) <- labels
+
+write.csv(my_R, file="data1_R.txt")
+write.csv(my_G, file="data1_G.txt")
+
+(class(my_R))
+(dim(my_R))
 ```
 
 
 ## 2. Normalisation
 
-> **Question** : Reproduisez à partir des données fournies les **MA Plots** des données avant normalisation et après normalisation. Donnez les commandes utilisées et expliquez chacune des options utilisées. Joignez les graphes.
+Le MA-plot est une figure de mérite de l'analyse de données de puces en expression. Le M, pour "Minus", correspond à la différence des logs d'intensité dans les deux fluorochromes. Le A, pour "Average", correspond à la moyenne des logs d'intensités. Les graphes representent M(A) pour chaque spot d'une puce, en nuage de points. 
+
+> **Question** : Ecrivez les formules de M et de A. Produisez à partir des données fournies les **MA Plots** des données avant normalisation, pour chaque puce. Donnez les commandes utilisées et expliquez chacune des options utilisées. Quelle doit être la forme du nuage de points ? Est-ce le cas pour toutes les puces ? Sinon, pourquoi les nuages de points sont-ils déformés ?
+
+```{r MAplots_donnees_brutes, echo=TRUE}
+M <- log2(my_R/my_G)
+A <- log2(my_R*my_G)
+
+for (i in 1:length(colnames(my_R))){
+  png(sprintf("maplot_raw/maplot_raw_%i.png", i))
+  plot(M[, i]~A[, i], main=paste("MAplot raw data ", colnames(my_R)[i], sep=""), pch="+")
+  abline(h = 0, col="red")
+  dev.off()
+}
+
+```
+
+> **Question** : Produisez les MA-plots sur données normalisées, pour chaque puce. Quels sont les changements observés?
+
+```{r norm_printtiploess, echo=TRUE}
+datnorm <- maNorm(dat, norm="printTipLoess", subset=TRUE)
+
+my_M_norm <- datnorm@maM
+colnames(my_M_norm) <- colnames(M)
+rownames(my_M_norm) <- rownames(M)
+my_A_norm <- datnorm@maA
+colnames(my_A_norm) <- colnames(A)
+rownames(my_A_norm) <- rownames(A)
+
+write.csv(my_M_norm, file="data2_M.txt")
+write.csv(my_A_norm, file="data2_A.txt")
+
+for (i in 1:length(colnames(my_M_norm))){
+  png(sprintf("maplot_norm/maplot_norm_%i.png", i))
+  plot(my_M_norm[, i]~my_A_norm[, i], main=paste("MAplot norm data ", colnames(my_M_norm)[i], sep=""), pch="+")
+  abline(h = 0, col="red")
+  dev.off()
+}
+
+```
+
+Nous allons visualiser la proximité relative des observations, grâce à une Analyse en Composantes Principales. Il s'agit d'une méthode d'analyse multivariées par réduction de dimension. Les composantes principales sont des combinaisons linéaires des variables. Elles ont pour contraintes de maximiser la variance entre les observations et d'être orthogonales entre elles. Le nombre de composantes est égal au rang de la matrice des données. On utilise la fonction prcomp de R base.
+
+> **Question** : Centrez les données. Calculez les composantes grâce à la fonction prcomp. Combien y a-t-il de composantes ? Représentez graphiquement les observations en fonction des deux premières composantes, colorez les points en fonction de la colonne "dye_swap_id" du tableau de données "pheno". Que constatez-vous ?
+
+Le biais résiduel se corrige grâce au "dye-swap" (inversion de fluorochrome). Pour chaque comparaison, chaque condition sera marquée une fois en rouge (Cy5) et une fois en vert (Cy3). La moyenne des M et des A, sur les deux sens de marquage permet d'obtenir une mesure d'intentsité unique corrigées pour le biais d'intensité.
+
+> **Question** : Ecrivez les formules des moyennes des M et des A, sur les deux sens de marquages. Produisez les MA-plots correspondants. Que constatez-vous ?
+
+Il s'agit maintenant de pouvoir comparer toutes les conditions entre elles. Pour pouvoir ultérieurement, appliquer un test statistique, il faut au préalable s'assurer que les distributions les données de chaque conditions sont comparables. Un moyen de s'en assurer est de produire un graphe en boîte à moustaches (boxplot), qui visualise pour chaque condition la médiane des log(intensités des sondes), les premier et troisième quartiles ainsi que les queues de distributions.
+
+> **Question** : Produisez les boxplots des données normalisées. Si les conditions sont comparables entre elles, quelle figure doit-on obtenir ? Qu'obtenez-vous ? Quelle est votre conclusion ?
+
+Nous allons procéder à la normalisation des quantiles, grâce à la fonction normalizeBetweenArrays du package marray.
+
+> **Question** : Affichez l'aide de la fonction. Procédez à la normalisation. Justifiez les paramètres choisis. Produisez les boxplots des données après normalisation des quantiles. Que constatez-vous ?
+
+Les données sont à présent normalisées et prêtes à l'emploi. 
+
+> **Question** : Calculez à nouveau des composantes principales et représentez graphiquement les observations en fonctions des deux premières composantes principales. La couleur des points s'affichera en fonction de la colonne ID du tableau de données pheno et la forme des points (paramètre pch de la fonction plot) s'affichera en fonction de la collonne "prodiff". Que constatez-vous ?
+
 
 ## 3. Analyse différentielle
 
