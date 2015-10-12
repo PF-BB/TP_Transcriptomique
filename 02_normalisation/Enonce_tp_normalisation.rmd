@@ -27,7 +27,10 @@ Enfin, dans la **couche cornée**, le kératinocyte (qui prend maintenant le nom
 
 Le kératinocyte passe donc d’un état prolifératif dans la couche basale à un état de différenciation terminale dans la couche cornée avant sa mort cellulaire et sa desquamation. Dans la peau, ce cycle de différenciation dure une vingtaine de jours. Ce processus de différenciation peut-être reproduit in vitro. Notamment, en culture, les kératinocytes se différencient naturellement à partir du moment où la confluence est atteinte, cette technique a été utilisée pour générer les données que nous allons analyser.
 
+# Objectif 
 L’objectif du TP est d’analyser la modulation de l'expression des gènes au cours de la différenciation in vitro de kératinocytes humains. Des expériences d'analyse du transcriptome ont été réalisées en utilisant des puces à ADN sur lesquelles ont été déposées des oligonucléotides longs.
+
+# Données
 
 Au total les lames contiennent 26495 spots.
 
