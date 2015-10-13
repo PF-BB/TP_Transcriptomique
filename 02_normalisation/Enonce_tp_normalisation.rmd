@@ -43,7 +43,7 @@ Pour chaque état P ou D, une extraction d'ARN a été faites pour 3 individus d
 
 ## 1. Lecture d'un fichier de données
 
-> **Question** : Chargez en mémoire les fichiers "data_1.txt", "data_2.txt", "data_3.txt", "data_4.txt" et "pheno.txt" ? Expliquez chacune des options utilisée.
+> **Question** : Chargez en mémoire les fichiers "data1_R.txt", "data1_G.txt", "data2_M.txt", "data2_A.txt" et "pheno.txt" ? Expliquez chacune des options utilisée.
 
 ```{r chargement_donnees, echo=FALSE}
 require(convert)
@@ -89,6 +89,9 @@ data2@maLayout <- galinfo$layout
 data1@maGnames <- galinfo$gnames
 data2@maGnames <- galinfo$gnames
 data <- cbind(data1, data2)
+
+pheno <- read.csv(paste(PATHDATA, "pheno.txt", sep=""))
+
 
 ```
 
@@ -163,21 +166,97 @@ Nous allons visualiser la proximité relative des observations, grâce à une An
 
 > **Question** : Centrez les données. Calculez les composantes grâce à la fonction prcomp. Combien y a-t-il de composantes ? Représentez graphiquement les observations en fonction des deux premières composantes, colorez les points en fonction de la colonne "dye_swap_id" du tableau de données "pheno". Que constatez-vous ?
 
+```{r ACP_dye-swap, echo=TRUE}
+M_centered <- scale(my_M_norm, center=T, scale=FALSE)
+
+M_acp <- prcomp(t(M_centered), retx = T)
+
+png("acp_dye_swap.pdf")
+plot(M_acp$x[, 2]~M_acp$x[, 1], main="Analyse en Composantes Principales - Inversion de fluorochromes", col=pheno$dye_swap_id, xlab="PC1", ylab="PC2")
+dev.off()
+
+```
+
+
 Le biais résiduel se corrige grâce au "dye-swap" (inversion de fluorochrome). Pour chaque comparaison, chaque condition sera marquée une fois en rouge (Cy5) et une fois en vert (Cy3). La moyenne des M et des A, sur les deux sens de marquage permet d'obtenir une mesure d'intentsité unique corrigées pour le biais d'intensité.
 
 > **Question** : Ecrivez les formules des moyennes des M et des A, sur les deux sens de marquages. Produisez les MA-plots correspondants. Que constatez-vous ?
+
+```{r norm_dye_swap, echo=TRUE}
+
+M_ds1 <- M_norm[,which(pheno$inversion == "inversion1")]
+M_ds1 <- M_ds1[, sort(colnames(M_ds1))]
+M_ds2 <- M_norm[,which(pheno$inversion == "inversion2")]
+M_ds2 <- M_ds2[, sort(colnames(M_ds2))]
+
+M_ds <-  M_ds1 - M_ds2
+colanmes(M_ds) <- colnames(M_ds1)
+
+A_ds1 <- A_norm[,which(pheno$inversion == "inversion1")]
+A_ds1 <- A_ds1[, sort(colnames(A_ds1))]
+A_ds2 <- A_norm[,which(pheno$inversion == "inversion2")]
+A_ds2 <- A_ds2[, sort(colnames(A_ds2))]
+
+A_ds <-  0.5*(A_ds1 + A_ds2)
+colanmes(A_ds) <- colnames(A_ds1)
+
+for (i in 1:length(colnames(M_ds))){
+  png(sprintf("maplot_norm/maplot_ds_%i.png", i))
+  plot(M_ds[, i]~A_ds[, i], main=paste("MAplot dye-swap norm data ", colnames(M_ds)[i], sep=""), pch="+")
+  abline(h = 0, col="red")
+  dev.off()
+}
+
+
+```
 
 Il s'agit maintenant de pouvoir comparer toutes les conditions entre elles. Pour pouvoir ultérieurement, appliquer un test statistique, il faut au préalable s'assurer que les distributions les données de chaque conditions sont comparables. Un moyen de s'en assurer est de produire un graphe en boîte à moustaches (boxplot), qui visualise pour chaque condition la médiane des log(intensités des sondes), les premier et troisième quartiles ainsi que les queues de distributions.
 
 > **Question** : Produisez les boxplots des données normalisées. Si les conditions sont comparables entre elles, quelle figure doit-on obtenir ? Qu'obtenez-vous ? Quelle est votre conclusion ?
 
+```{r boxplot, echo=TRUE}
+
+png("boxplot_M_ds.png")
+boxplot(M_ds, main="Boxplot M dye-swap norm data", las=2)
+abline(h=0)
+dev.off()
+
+```
+
+
 Nous allons procéder à la normalisation des quantiles, grâce à la fonction normalizeBetweenArrays du package marray.
 
-> **Question** : Affichez l'aide de la fonction. Procédez à la normalisation. Justifiez les paramètres choisis. Produisez les boxplots des données après normalisation des quantiles. Que constatez-vous ?
+> **Question** : Chargez le package limma. Affichez l'aide de la fonction normalizeBetweenArrays. Procédez à la normalisation. Justifiez les paramètres choisis. Produisez les boxplots des données après normalisation des quantiles. Que constatez-vous ?
+
+```{r quantile_norm, echo=TRUE}
+library(limma)
+?normalizeBetweenArrays
+
+my_ma <- new("maList", M=M_ds, A=A_ds)
+my_ma_q <- normalizeBetweenArrays(my_ma, method = "quantile")
+
+png("boxplot_M_q.png")
+boxplot(my_ma_q@M, main="Boxplot M quantile norm data", las=2)
+abline(h=0)
+dev.off()
+
+```
 
 Les données sont à présent normalisées et prêtes à l'emploi. 
 
-> **Question** : Calculez à nouveau des composantes principales et représentez graphiquement les observations en fonctions des deux premières composantes principales. La couleur des points s'affichera en fonction de la colonne ID du tableau de données pheno et la forme des points (paramètre pch de la fonction plot) s'affichera en fonction de la collonne "prodiff". Que constatez-vous ?
+> **Question** : Calculez à nouveau des composantes principales et représentez graphiquement les observations en fonctions des deux premières composantes principales. La couleur des points s'affichera en fonction de la colonne ID du tableau de données pheno et la forme des points (paramètre pch de la fonction plot) s'affichera en fonction de la colonne "prodiff". Que constatez-vous ?
+
+```{r acp_dye-swap_norm, echo=T}
+
+M_centered <- scale(my_ma_q@M, center=T, scale=FALSE)
+
+M_acp <- prcomp(t(M_centered), retx = T)
+
+png("acp_q_norm.pdf")
+plot(M_acp$x[, 2]~M_acp$x[, 1], main="Analyse en Composantes Principales - Dye-swap + Quantile", col=pheno$ID, pch=pheno$prodiff, xlab="PC1", ylab="PC2")
+dev.off()
+
+```
 
 
 ## 3. Analyse différentielle
