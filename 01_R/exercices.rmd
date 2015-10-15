@@ -1,5 +1,5 @@
 ---
-title: "Exercices de la session 1"
+title: "Exercices 1"
 author: "Vincent Guillemot"
 output: pdf_document
 header-includes :

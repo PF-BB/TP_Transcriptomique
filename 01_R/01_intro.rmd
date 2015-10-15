@@ -1,8 +1,7 @@
 ---
-title: "RIR <br> "
-subtitle: "Rapide Introduction à R"
+title: "Introduction à R"
 author: "Vincent Guillemot"
-date: "Mardi 8 sept. 2015"
+date: "Vendredi 16 oct. 2015"
 output: ioslides_presentation
 ---
 
@@ -52,13 +51,13 @@ grid()
  
 http://cran.r-project.org/
 
-![CRAN](../images/logo_R.png)
+![CRAN](images/logo_R.png)
 
 ## R Studio
 
 http://www.rstudio.com
 
-![RStudio](../images/RStudio-Ball.png)
+![RStudio](images/RStudio-Ball.png)
 
 ## R Markdown
 
@@ -96,7 +95,7 @@ https://www.getdatajoy.com
 
 https://github.com/PF-BB/RIR
 
-![GitHub](../images/notocat.jpg)
+![GitHub](images/notocat.jpg)
 
 ## Ressources pédagogiques
 
@@ -106,4 +105,4 @@ Des liens vers des ressources seront ajoutés au fur et à mesure sur le mini-si
 
 # Let's go!
 
-![Roomba](../images/roomba.gif)
+![Roomba](images/roomba.gif)

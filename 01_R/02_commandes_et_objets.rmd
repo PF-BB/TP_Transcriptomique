@@ -1,15 +1,14 @@
 ---
 title: "R, objets et commandes"
-subtitle: "Rapide Introduction à R"
 author: "Vincent Guillemot"
-date: "Mardi 8 sept. 2015"
+Vendredi 16 oct. 2015
 output: ioslides_presentation
 ---
 
 
 ## Comprehensive R Archive Network -- CRAN
 
-![RStudio](../images/logo_R.png)
+![RStudio](images/logo_R.png)
 
 ## Consoles de base
 
@@ -20,7 +19,7 @@ output: ioslides_presentation
 
 ## R Studio : pour aller plus loin
 
-![RStudio](../images/RStudio-Ball.png)
+![RStudio](images/RStudio-Ball.png)
 
 ## Commandes de base
 
