@@ -1,9 +1,8 @@
 ---
 title: "R, objets et commandes"
 author: "Vincent Guillemot"
-date: "Mardi 8 sept. 2015"
+date: "Vendredi 16 oct. 2015"
 output: ioslides_presentation
-subtitle: Rapide Introduction à R
 ---
 
 ```{r preambule, echo=FALSE, message=FALSE, warning=FALSE}

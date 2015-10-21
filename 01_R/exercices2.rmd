@@ -1,6 +1,6 @@
 ---
-title: "Exercices de la session 2"
-author: "Vincent Guillemot & Justine Guégan"
+title: "Exercices 2"
+author: "Vincent Guillemot"
 output: pdf_document
 header-includes :
   - \usepackage{graphicx}

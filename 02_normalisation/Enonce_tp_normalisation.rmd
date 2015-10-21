@@ -45,7 +45,91 @@ Pour chaque état P ou D, une extraction d'ARN a été faites pour 3 individus d
 
 > **Question** : Chargez en mémoire les fichiers "data1_R.txt", "data1_G.txt", "data2_M.txt", "data2_A.txt" et "pheno.txt" ? Expliquez chacune des options utilisée.
 
-> **Question** : Quelle est la classe des objets chargés en mémoire et quelles en sont les dimensions ?
+```{r chargement_donnees, echo=FALSE, eval=FALSE}
+require(convert)
+require(marray)
+
+PATHDATA <- "~/Enseignements/TP-Genomique-Marie-Anne/data"
+
+l <- read.table(text="ID:NLINE:TERM
+I1D_1_3.gpr:110:Block
+I1D_1_5.gpr:110:Block
+I1D_2_3.gpr:110:Block
+I1D_2_5.gpr:110:Block
+I1P_1_3.gpr:110:Block
+I1P_1_5.gpr:110:Block
+I1P_2_3.gpr:110:Block
+I1P_2_5.gpr:110:Block
+I2D_1_3.gpr:110:Block
+I2D_1_5.gpr:110:Block
+I2D_2_3.gpr:110:Block
+I2D_2_5.gpr:110:Block
+I2P_1_3.gpr:32:Block
+I2P_1_5.gpr:32:Block
+I2P_2_3.gpr:110:Block
+I2P_2_5.gpr:110:Block
+I3D_1_3.gpr:110:Block
+I3D_1_5.gpr:110:Block
+I3D_2_3.gpr:110:Block
+I3D_2_5.gpr:110:Block
+I3P_1_3.gpr:110:Block
+I3P_1_5.gpr:110:Block
+I3P_2_3.gpr:110:Block
+I3P_2_5.gpr:110:Block", sep=":", header=TRUE, stringsAsFactors=F)
+ids <- split(l$ID, l$NLINE)
+
+galinfo <- read.Galfile(galfile = "AWS.gal", path=PATHDATA, skip = 133)
+data1 <- read.GenePix(fnames = ids[[1]], path = PATHDATA, skip = as.numeric(names(ids)[1])-1, 
+                      name.Gb=NULL, name.Rb=NULL)
+data2 <- read.GenePix(fnames = ids[[2]], path = PATHDATA, skip = as.numeric(names(ids)[2])-1, 
+                      name.Gb=NULL, name.Rb=NULL)
+
+data1@maLayout <- galinfo$layout
+data2@maLayout <- galinfo$layout
+data1@maGnames <- galinfo$gnames
+data2@maGnames <- galinfo$gnames
+data <- cbind(data1, data2)
+
+pheno <- read.csv(paste(PATHDATA, "pheno.txt", sep="/"))
+
+
+```
+
+> **Question** : Quelle est la classe de l'objet chargé en mémoire et quelles en sont les dimensions ?
+
+```{r, echo=FALSE, eval=FALSE}
+
+good <- rowSums(data@maW)==0
+dat <- data[good, ]
+
+my_R <- dat@maRf
+colnames(my_R) <- gsub("~/Enseignements/TP-Genomique-Marie-Anne/data/", "", colnames(my_R))
+colnames(my_R) <- gsub(".gpr", "", colnames(my_R))
+rownames(my_R) <- dat@maGnames@maLabels
+
+my_G <- dat@maGf
+colnames(my_G) <- gsub("~/Enseignements/TP-Genomique-Marie-Anne/data/", "", colnames(my_G))
+colnames(my_G) <- gsub(".gpr", "", colnames(my_G))
+rownames(my_G) <- dat@maGnames@maLabels
+
+write.csv(my_R, file=paste(PATHDATA, "data1_R.txt", sep="/"))
+write.csv(my_G, file=paste(PATHDATA, "data1_G.txt", sep="/"))
+```
+
+```{r classe_dim, echo=TRUE, message=FALSE}
+
+require(convert)
+require(marray)
+
+PATHDATA <- "~/Enseignements/TP-Genomique-Marie-Anne/data"
+my_R <- read.csv(paste(PATHDATA, "data1_R.txt", sep="/"))
+my_G <- read.csv(paste(PATHDATA, "data1_G.txt", sep="/"))
+probes <- as.character(my_R[, 1])
+pheno <- read.csv(paste(PATHDATA, "pheno.txt", sep="/"), row.names=1)
+
+(class(my_R))
+(dim(my_R))
+```
 
 
 ## 2. Normalisation
@@ -54,28 +138,175 @@ Le MA-plot est une figure de mérite de l'analyse de données de puces en expres
 
 > **Question** : Ecrivez les formules de M et de A. Produisez à partir des données fournies les **MA Plots** des données avant normalisation, pour chaque puce. Donnez les commandes utilisées et expliquez chacune des options utilisées. Quelle doit être la forme du nuage de points ? Est-ce le cas pour toutes les puces ? Sinon, pourquoi les nuages de points sont-ils déformés ?
 
+```{r MAplots_donnees_brutes, echo=TRUE, message=FALSE}
+M <- log2(as.matrix(my_R[, -1])/as.matrix(my_G[, -1]))
+A <- 0.5*log2(as.matrix(my_R[, -1])*as.matrix(my_G[, -1]))
+
+png(paste(PATHDATA, "maplot_raw/maplot_raw.png", sep="/"), 
+    units = "cm", width=21, height=29.7, res=300)
+layout(matrix(1:24, nrow=6, ncol=4))
+par(mar=c(1, 1, 1, 1))
+for (i in 1:length(colnames(M))){
+  plot(M[, i]~A[, i], main=paste("MAplot raw data ", 
+                                 colnames(M)[i], sep=""), pch="+")
+  abline(h = 0, col="red")
+}
+dev.off()
+
+```
+![MA plots des données brutes.](maplot_raw.png)
+
 > **Question** : Produisez les MA-plots sur données normalisées, pour chaque puce. Quels sont les changements observés?
 
+```{r norm_printtiploess, echo=FALSE, eval=FALSE}
+datnorm <- maNorm(dat, norm="printTipLoess", subset=TRUE)
+
+my_M_norm <- datnorm@maM
+colnames(my_M_norm) <- colnames(M)
+rownames(my_M_norm) <- rownames(M)
+my_A_norm <- datnorm@maA
+colnames(my_A_norm) <- colnames(A)
+rownames(my_A_norm) <- rownames(A)
+
+write.csv(my_M_norm, file=paste(PATHDATA, "data2_M.txt", sep="/"))
+write.csv(my_A_norm, file=paste(PATHDATA, "data2_A.txt", sep="/"))
+```
+
+```{r MA_plot_norm_printtiploess, echo=TRUE, message=FALSE}
+
+my_M_norm <- read.csv(paste(PATHDATA, "data2_M.txt", sep="/"))
+my_M_norm <- as.matrix(my_M_norm[, -1])
+my_A_norm <- read.csv(paste(PATHDATA, "data2_A.txt", sep="/"))
+my_A_norm <- as.matrix(my_A_norm[, -1])
+
+png(paste(PATHDATA, "maplot_norm/maplot_norm.png", sep="/"), 
+    units = "cm", width=21, height=29.7, res=300)
+layout(matrix(1:24, nrow=6, ncol=4))
+par(mar=c(1, 1, 1, 1))
+for (i in 1:length(colnames(my_M_norm))){
+  plot(my_M_norm[, i]~my_A_norm[, i], 
+       main=paste("MAplot norm data ", colnames(my_M_norm)[i], sep=""), pch="+")
+  abline(h = 0, col="red")
+}
+dev.off()
+
+```
+![MA plots des données normalisées par PrintTipLoess.](maplot_norm.png)
 
 Nous allons visualiser la proximité relative des observations, grâce à une Analyse en Composantes Principales. Il s'agit d'une méthode d'analyse multivariées par réduction de dimension. Les composantes principales sont des combinaisons linéaires des variables. Elles ont pour contraintes de maximiser la variance entre les observations et d'être orthogonales entre elles. Le nombre de composantes est égal au rang de la matrice des données. On utilise la fonction prcomp de R base.
 
 > **Question** : Centrez les données. Calculez les composantes grâce à la fonction prcomp. Combien y a-t-il de composantes ? Représentez graphiquement les observations en fonction des deux premières composantes, colorez les points en fonction de la colonne "dye_swap_id" du tableau de données "pheno". Que constatez-vous ?
+
+```{r ACP_dye-swap, echo=TRUE}
+M_centered <- scale(my_M_norm, center=T, scale=FALSE)
+
+M_acp <- prcomp(t(M_centered), retx = T)
+
+plot(M_acp$x[, "PC2"]~M_acp$x[, "PC1"], 
+     main="Analyse en Composantes Principales\nInversion de fluorochromes", 
+     col=as.numeric(as.factor(pheno$dye)), xlab="PC1", ylab="PC2", 
+     pch=as.numeric(as.factor(pheno$prodiff))+14, cex=2)
+
+```
 
 
 Le biais résiduel se corrige grâce au "dye-swap" (inversion de fluorochrome). Pour chaque comparaison, chaque condition sera marquée une fois en rouge (Cy5) et une fois en vert (Cy3). La moyenne des M et des A, sur les deux sens de marquage permet d'obtenir une mesure d'intentsité unique corrigées pour le biais d'intensité.
 
 > **Question** : Ecrivez les formules des moyennes des M et des A, sur les deux sens de marquages. Produisez les MA-plots correspondants. Que constatez-vous ?
 
+```{r norm_dye_swap, echo=TRUE}
+
+M_cy3 <- my_M_norm[,which(pheno$dye == "Cy3")]
+M_cy3 <- M_cy3[, sort(colnames(M_cy3))]
+M_cy5 <- my_M_norm[,which(pheno$dye == "Cy5")]
+M_cy5 <- M_cy5[, sort(colnames(M_cy5))]
+
+M_ds <-  M_cy3 - M_cy5
+colnames(M_ds) <- colnames(M_cy3)
+
+A_cy3 <- my_A_norm[,which(pheno$dye == "Cy3")]
+A_cy3 <- A_cy3[, sort(colnames(M_cy3))]
+A_cy5 <- my_A_norm[,which(pheno$dye == "Cy5")]
+A_cy5 <- A_cy5[, sort(colnames(A_cy5))]
+
+A_ds <-  0.5*(A_cy3 + A_cy5)
+colnames(A_ds) <- colnames(A_cy3)
+
+png(paste(PATHDATA, "maplot_norm_ds/maplot_ds.png", sep="/"), 
+    width=21, h=29.7, units="cm", res=300)
+layout(matrix(1:12, nrow=4, ncol=3))
+for (i in 1:length(colnames(M_ds))){
+  plot(M_ds[, i]~A_ds[, i], main=paste("MAplot dye-swap norm data ", 
+                                       colnames(M_ds)[i], sep=""), 
+       pch="+")
+  abline(h = 0, col="red")
+}
+dev.off()
+
+```
+![MA plots après normalisation dye-swap.](maplot_norm_ds.png)
+
 
 Il s'agit maintenant de pouvoir comparer toutes les conditions entre elles. Pour pouvoir ultérieurement, appliquer un test statistique, il faut au préalable s'assurer que les distributions les données de chaque conditions sont comparables. Un moyen de s'en assurer est de produire un graphe en boîte à moustaches (boxplot), qui visualise pour chaque condition la médiane des log(intensités des sondes), les premier et troisième quartiles ainsi que les queues de distributions.
 
 > **Question** : Produisez les boxplots des données normalisées. Si les conditions sont comparables entre elles, quelle figure doit-on obtenir ? Qu'obtenez-vous ? Quelle est votre conclusion ?
 
+```{r boxplot, echo=TRUE}
+
+boxplot(M_ds, main="Boxplot M dye-swap norm data", las=2, col=palette(rainbow(3)))
+abline(h=0)
+
+```
+
+
 Nous allons procéder à la normalisation des quantiles, grâce à la fonction normalizeBetweenArrays du package marray.
 
 > **Question** : Chargez le package limma. Affichez l'aide de la fonction normalizeBetweenArrays. Procédez à la normalisation. Justifiez les paramètres choisis. Produisez les boxplots des données après normalisation des quantiles. Que constatez-vous ?
+
+```{r quantile_norm, echo=TRUE}
+library(limma)
+?normalizeBetweenArrays
+
+my_ma <- new("MAList")
+my_ma[["M"]] <- M_ds
+my_ma[["A"]] <- A_ds
+my_ma_q <- normalizeBetweenArrays(my_ma, method = "quantile")
+
+boxplot(my_ma_q[["M"]], main="Boxplot M quantile norm data", 
+        las=2, col=palette(rainbow(3)))
+abline(h=0)
+
+```
 
 Les données sont à présent normalisées et prêtes à l'emploi. 
 
 > **Question** : Calculez à nouveau des composantes principales et représentez graphiquement les observations en fonctions des deux premières composantes principales. La couleur des points s'affichera en fonction de la colonne ID du tableau de données pheno et la forme des points (paramètre pch de la fonction plot) s'affichera en fonction de la colonne "prodiff". Que constatez-vous ?
 
+```{r acp_dye-swap_norm, echo=T}
+
+M_centered <- scale(my_ma_q[["M"]], center=T, scale=FALSE)
+
+M_acp <- prcomp(t(M_centered), retx = T)
+
+pheno_ds <- read.csv(paste(PATHDATA, "pheno_ds.txt", sep="/"))
+
+plot(M_acp$x[, "PC2"]~M_acp$x[, "PC1"], 
+     main="Analyse en Composantes Principales - Dye-swap + Quantile", 
+     col=as.numeric(as.factor(pheno_ds$ID)), 
+     pch=as.numeric(as.factor(pheno_ds$prodiff))+15, 
+     cex=2, xlab="PC1", ylab="PC2")
+
+```
+
+
+## 3. Analyse différentielle
+
+> **Question** : Quels sont les 10 premiers transcrits identifiés comme différentiellement exprimés ? Donnez l'identifiant du transcrit, la valeur de la statistique de Student, la _p-value_ et la _p-value_ ajustée par la méthode de Benjamini-Hochberg.
+
+> **Question** : Combien de transcrits sont différentiellement exprimés ?
+
+> **Question** : Produisez un **Volcano Plot**. Expliquez la commande utilisée et joignez la figure.
+
+## 4. Classification hierarchique
+
+> **Question** : Produisez une **Heat Map** des données après sélection des gènes différentiellement exprimés. Sur ce graphe doit également un arbre de classification. Expliquez la commande utilisée et joignez la figure.

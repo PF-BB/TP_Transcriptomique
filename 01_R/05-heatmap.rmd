@@ -1,8 +1,7 @@
 ---
 title: "Graphes : heatmaps et dimensions supplémentaires"
-subtitle: "Rapide Introduction à R"
 author: "Vincent Guillemot"
-date: "Mercredi 9 sept. 2015"
+date: "Vendredi 16 oct. 2015"
 output: ioslides_presentation
 ---
 
