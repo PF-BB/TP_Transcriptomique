@@ -95,7 +95,7 @@ pheno <- read.csv(paste(PATHDATA, "pheno.txt", sep="/"))
 
 ```
 
-> **Question** : Quel est la classe de l'objet chargé en mémoire et quelles en sont les dimensions ?
+> **Question** : Quelle est la classe des objets chargés en mémoire et quelles en sont les dimensions ?
 
 ```{r, echo=FALSE, eval=FALSE}
 
@@ -168,8 +168,8 @@ my_A_norm <- datnorm@maA
 colnames(my_A_norm) <- colnames(A)
 rownames(my_A_norm) <- rownames(A)
 
-write.csv(my_M_norm, file="data2_M.txt")
-write.csv(my_A_norm, file="data2_A.txt")
+write.csv(my_M_norm, file=paste(PATHDATA, "data2_M.txt", sep="/"))
+write.csv(my_A_norm, file=paste(PATHDATA, "data2_A.txt", sep="/"))
 ```
 
 ```{r MA_plot_norm_printtiploess, echo=TRUE, message=FALSE}
