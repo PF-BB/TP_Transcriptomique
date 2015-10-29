@@ -1,0 +1,94 @@
+---
+title: 'Annexe théorique 1 : analyse en composantes principlaes'
+output: pdf_document
+---
+
+L'analyse en composantes principales est une méthode d'analyse multivariée permettant d'identifier des composantes (c'est à dire des combinaisons linéiares des variables) permettant d'expliquer la variabilité présente dans un jeu de données ($X$). En statistique, la convention veut que le jeu de données soit une matrice rectangulaire de dimensions $n \times p$, contenant, en lignes, les réalisations (qui peuvent etre des individus).
+
+Principal Component Analysis (PCA) aims at finding components (i.e. linear combinations of variables) that explain the best the variability of a given dataset ($X$).
+
+## Sous-problème 1
+
+
+A sub-problem that will help us to compute the first principal component is the following:
+\[ \max \frac{1}{2} u ^\top A u \text{~s.t.~} u^\top u = 1,\]
+given a square matrix $A$ of dimension $p \times p$.
+
+It can be shown that this problem's solution can be obtained by minimizing its dual Lagrangian :
+\[ \mathcal L(u, \lambda) = -\frac{1}{2} u ^\top A u + \frac{\lambda}{2}(u^\top u - 1) ,\]
+which depends on an additional parameter $\lambda$.
+
+\[ \frac{\partial \mathcal L}{\partial u}(u, \lambda) = -A u + \lambda u \]
+
+The solution of this problem (the $\arg \max$) is then an eigenvector (with norm 1) of $A$ associated to an eigenvalue equal to $u^\top A u$, because the solution of the equation $\frac{\partial \mathcal L}{\partial u}(u^*, \lambda) = 0$ is such that
+
+\[ \lambda = u^{* \top} A u^*.\]
+
+> _Question_: Show that $u^*$ is associated to the maximum eigenvalue of $A$.
+
+> _Question_: Compute $u^*$ when $A = \left[ \begin{array}{cc} 1 & a \\ a & 1 \end{array} \right]$.
+
+
+## *Power iteration*
+
+It is a very *simple* algorithm to compute the dominant eigenvalue and its associated  eigenvector. Let us first add that $A$ is a diagonalizable matrix. Then, the sequence defined by
+\[u_{k+1} = \frac{1}{\| A u_k \|_2}A u_k,\]
+(and initialized *randomly*) converges to the eigenvector of $A$ associated to its dominant eigenvalue.
+
+> _Question_: Write very shortly in pseudo-code an algorithm (that we will translate into R later) to compute the first (*dominant*) eigenvector of a square matrix.
+
+*Why does it work?* Think about what it means for $u_0$ that $A$ is diagonalizable and compute $A^k u_0$.
+
+
+## Application to a toy dataset: computing the direction of maximum variability
+
+Let us now assume that we have a dataset $X$, for which we don't know much, except that its variance-covariance matrix is equal to $A$.
+
+> _Question_: Translate in conditions on $a$ the fact that $A = \left[ \begin{array}{cc} 1 & a \\ a & 1 \end{array} \right]$ is a covariance matrix.
+
+
+We represented on Figure \ref{fig:ellipse} a random 2D toy dataset with covariance matrix $A$ ($a=0.8$), the ellipse defined by $A$, and the 2 directions defined by $A$'s eigenvectors. This graph illustrates that there is a direct link between a dataset's directions of maximum variability and the eigenvectors of its covariance matrix! 
+
+```{r ellipse, echo=F, message=FALSE, fig.align='center', fig.cap="Graphical representation of the toy 2D dataset, its covariance matrix (as an ellipse), and the two principal components."}
+require(ellipse)
+require(MASS)
+A <- structure(c(1, 0.8, 0.8, 1), .Dim = c(2L, 2L))
+x <- mvrnorm(n=1000, mu=c(0,0), Sigma=A, empirical=TRUE)
+plot(x, asp=1, xlab="First variable", ylab="Second Variable", col=scales::alpha("black",0.5))
+grid()
+lines(ellipse(A), lty=2, lwd=3, col="steelblue")
+abline(0, 1, col="tomato", lwd=3)
+abline(0, -1, col="tomato", lwd=3)
+legend("left", c("Data point", "Covariance", "Components"), 
+       pch=c(1,NA,NA), lty=c(NA,2,1), lwd=c(NA,3,3), bty="n",
+       col=c("black", "steelblue", "tomato"))
+```
+
+Therefore, since we know how to compute the dominant eigenvector of a square matrix (cf. the *power iteration* method), we know how to compute the main direction of variability of a dataset.
+
+> Question: Complete your pseudo-code to compute the main direction of variability of a given dataset $X$.
+
+## Rank-one approximation of a square matrix
+
+Another very intuitive formulation of the problem is the following:
+\[\min_{\tilde A} \| A - \tilde A \|,\]
+where $\tilde A$ is a rank one matrix, and the norm applied to matrices here is defined by $\|M\| = \trace( M^\top M)$. In other words: we want to find a rank-one approximation of $A$.
+
+ > Question: How is this problem linked to the first subproblem we had, namely \[ \max \frac{1}{2} u ^\top A u \text{~s.t.~} u^\top u = 1 ?\] Think that a rank one matrix can be expressed as $v v^\top$.
+
+## Deflation
+
+Once the first eigenvector of $A$ is computed, we still have to compute the rest of them. This is achieved through a process called *deflation*.
+
+> Question: The rank one approximation of $A$ is noted $\tilde A=u^{*,\top} A u^* A u^*$. Plus, we assume that $A$ is a positive definite matrix. What is the dominant eigenvalue of $A - \tilde A$?
+
+Thanks to the *power iteration* algorithm and to the deflation process, we have now a complete method to estimate all the eigenvectors and eigenvalues of a given covariance matrix $A$. 
+
+
+### Projection of the observations
+
+The projection of the observations in $X$ onto the eigenvectors is simply achieved by multiplying $X$ by the projection matrix formed by the computed eigenvectors.
+
+In other words, we compute the coordinates of the observations in a new (possibly of lower rank) basis formed by the eigenvectors and thus obtain the Principal Components. 
+
+> Question: Complete your pseudo-code to have an algorithm that is able to compute at least two principal components of a given dataset $X$. 

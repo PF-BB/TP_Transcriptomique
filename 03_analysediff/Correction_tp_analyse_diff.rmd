@@ -1,0 +1,338 @@
+---
+title: "Untitled"
+author: "Vincent Guillemot"
+date: "26 octobre 2015"
+output: pdf_document
+---
+
+
+```{r}
+require(limma)
+require(marray)
+```
+
+```{r lecture, echo=FALSE}
+PATHDATA <- "~/Enseignements/TP-Genomique-Marie-Anne/data"
+my_M_norm <- read.csv(paste(PATHDATA, "data2_M.txt", sep="/"), stringsAsFactors = F)
+probes <- as.character(my_M_norm[, 1])
+my_M_norm <- as.matrix(my_M_norm[, -1])
+pheno <- read.csv(paste(PATHDATA, "pheno.txt", sep="/"), row.names=1)
+M_cy3 <- my_M_norm[,pheno$dye == "Cy3"]
+M_cy3 <- M_cy3[, sort(colnames(M_cy3))]
+M_cy5 <- my_M_norm[,pheno$dye == "Cy5"]
+M_cy5 <- M_cy5[, sort(colnames(M_cy5))]
+M_ds <-  M_cy3 - M_cy5
+my_ma_q <- normalizeBetweenArrays(M_ds, method = "quantile")
+pheno_ds <- read.csv(paste(PATHDATA, "pheno_ds.txt", sep="/"))
+y <- pheno_ds$prodiff
+
+X <- my_ma_q
+colnames(X) <- gsub("_3","", colnames(X))
+
+# Attention, opération dangereuse : on enlèves les sondes CTRL à la main
+toremove <- which(probes %in% c("ctr1_ACTB","ctr2_GAPDH","_EMPTY_",
+                  "A10_0E02", "A10_0E04", "A10_0E06", "A1_0A01", "A1_0A03", "A2_0A02", 
+                  "A2_0A04", "A2_0A06", "A3_0B01", "A3_0B03", "A3_0B05", "A4_0B02", 
+                  "A4_0B04", "A4_0B06", "A5_0C01", "A5_0C03", "A6_0C02", "A6_0C04", 
+                  "A6_0C06", "A7_0D01", "A7_0D03", "A7_0D05", "A8_0D02", "A8_0D04", 
+                  "A8_0D06", "A9_0E01", "A9_0E03", "A9_0E05", "B1'_0B08", "B1'_0B12", 
+                  "B1_0E07", "B1_0E09", "B1_0E11", "B2'_0C07", "B2'_0C09", "B2'_0C11", 
+                  "B2_0E08", "B2_0E10", "B2_0E12", "B3'_0C08", "B3'_0C10", "B3'_0C12", 
+                  "B3_0F07", "B3_0F09", "B3_0F11", "B4'_0D07", "B4'_0D09", "B4'_0D11", 
+                  "B4_0F08", "B4_0F10", "B4_0F12", "B5'_0D08", "B5'_0D10", "B5'_0D12", 
+                  "B5_0G07", "B5_0G09", "B5_0G11", "E1_0G08", "E1_0G10", "E1_0G12", 
+                  "E2_0H07", "E2_0H09", "E2_0H11", "E3_0H08", "E3_0H10", "E3_0H12", 
+                  "I1_0F01", "I1_0F03", "I1_0F05", "I2_0F02", "I2_0F04", "I2_0F06", 
+                  "I3_0G01", "I3_0G03", "I3_0G05", "I4_0G04", "I4_0G06", "I5_0H01", 
+                  "I5_0H03", "I5_0H05", "I6_0H02", "I6_0H04", "I6_0H06", "I7_0A07", 
+                  "I7_0A09", "I7_0A11", "I8_0A08", "I8_0A10", "I8_0A12", "I9_0B07", 
+                  "I9_0B09", "I9_0B11"))
+
+X <- X[-toremove,]
+probes <- probes[-toremove]
+
+# Et on les met en rownames
+rownames(X) <- probes
+
+galinfo <- read.Galfile(galfile = "AWS.gal", path=PATHDATA, skip = 133, stringsAsFactors = F)
+a <- galinfo$gnames@maInfo$Name
+annot1 <- sapply(strsplit(a, ";S="), function(el) el[1])
+annot2 <- sapply(strsplit(a, ";S="), function(el) el[2])
+annot <- data.frame(SONDE=annot1, REFSEQ=annot2, stringsAsFactors = F)
+annot <- subset(annot, !duplicated(SONDE))
+rownames(annot) <- annot$SONDE
+
+require(org.Hs.eg.db)
+id_refseq <- as.character(annot[rownames(X), "REFSEQ"])
+
+# Get the entrez gene identifiers that are mapped to any SYMBOL
+tmp_symb <- org.Hs.egSYMBOL
+symb <- as.list(tmp_symb[mappedkeys(tmp_symb)])
+rm(tmp_symb) ; gc()
+
+# Get the entrez gene identifiers that are mapped to any RefSeq ID
+tmp_refseq <- org.Hs.egREFSEQ2EG
+refseq <- as.list(tmp_refseq[mappedkeys(tmp_refseq)])
+rm(tmp_refseq) ; gc()
+
+symboltab <- data.frame(EG=names(symb), SYMBOL=unlist(symb), stringsAsFactors = F)  
+refseqtab <- data.frame(EG=unlist(refseq), REFSEQ=names(refseq), stringsAsFactors = F)
+BIGANNOT <- merge(symboltab, refseqtab, by="EG") 
+rownames(BIGANNOT) <- BIGANNOT$REFSEQ
+
+annot <- data.frame(annot[rownames(X),], BIGANNOT[id_refseq, ], stringsAsFactors = F)
+
+# On enlève les sondes non annotées donc les contrôles et les Spiked In
+X_0 <- X
+X <- X_0[na.omit(annot)$SONDE,]
+
+```
+
+
+Avec `limma` : 
+
+```{r, echo=FALSE}
+# design <- cbind(Diff=as.numeric(y)-2,Prolif=as.numeric(y)-1)
+design <- cbind(Prolif=1, Diff=2-as.numeric(y))
+fit <- lmFit(X,design)
+fit <- eBayes(fit)
+top <- topTable(fit, coef=2, genelist = annot[rownames(X),"SYMBOL"], p.value = 0.05, lfc = 2, number = nrow(X))
+volcanoplot(fit,coef=2, highlight=nrow(top))
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+```{r}
+# sdp <- which(apply(X[,y=="Prolif"], 1, sd)==0)
+
+pval <- apply(X, 1, function(x) t.test(x~y)$p.value)
+padj <- p.adjust(pval, "BH")
+
+logfc <- function(u, g) {
+  v <- 2^u
+  fc2 <- Reduce("/",tapply(v, g, mean))
+  return(log2(fc2))
+}
+lfc <- apply(X, 1, logfc, y)
+
+i <- which((abs(lfc) >= 2) & (padj < 0.05))
+
+diffgenes <- data.frame(LOGFC=lfc[i], PVAL=padj[i], annot[rownames(X)[i],] )
+o <- order(diffgenes$PVAL)
+diffgenes[o[1:10],]
+
+
+require(DescTools)
+PlotVenn(list(LIMMA=top$ID, TTest=diffgenes$SYMBOL))
+write.table(diffgenes, file="diff_exp_genes.tsv", sep="\t")
+
+
+write.table(subset(diffgenes, LOGFC >= 0), file="diff_exp_genes_UP(endiff).tsv", sep="\t")
+write.table(subset(diffgenes, LOGFC <  0), file="diff_exp_genes_DOWN(endiff).tsv", sep="\t")
+
+```
+
+```{r}
+Xdiff <- X[diffgenes$SONDE,]
+annotdiff <- annot[diffgenes$SONDE,]
+require(pheatmap)
+rownames(Xdiff) <- annotdiff$SYMBOL
+nstr <- colnames(Xdiff)
+colfac <- data.frame(Individu=substr(nstr,1,2), 
+                     Stade=substr(nstr,3,3), 
+                     Replicat=substr(nstr,5,5),
+                     row.names = nstr)
+
+pheatmap(t(Xdiff),annotation_row = colfac, cellwidth = 9, cellheight = 9)
+```
+
+
+ 
+```{r}
+pval_prolif <- apply(X, 1, function(x) t.test(x[y=="Prolif"],mu = 0)$p.value)
+padj_prolif <- p.adjust(pval_prolif, "bonferroni")
+pval_prolif <- apply(X, 1, function(x) t.test(x[y=="Prolif"])$p.value)
+padj_prolif <- p.adjust(pval_prolif, "bonferroni")
+
+logfc <- function(u, g) {
+  v <- 2^u
+  fc2 <- Reduce("/",tapply(v, g, mean))
+  return(log2(fc2))
+}
+lfc <- apply(X, 1, logfc, y)
+
+i <- which((abs(lfc) >= 2) & (padj < 0.05))
+
+diffgenes <- data.frame(LOGFC=lfc[i], PVAL=padj[i], annot[rownames(X)[i],] )
+o <- order(diffgenes$PVAL)
+diffgenes[o[1:10],]
+
+
+require(DescTools)
+PlotVenn(list(LIMMA=top$ID, TTest=diffgenes$SYMBOL))
+
+```
+
+
+```{r}
+fit_prolif  <- lmFit(X[,y=="Prolif"])
+fit_prolif <- eBayes(fit_prolif)
+top_prolif <- topTable(fit_prolif, genelist = annot[rownames(X),"SYMBOL"], p.value = 0.001, lfc = 3, number = nrow(X))
+
+fit_diff  <- lmFit(X[,y=="Diff"])
+fit_diff <- eBayes(fit_diff)
+top_diff <- topTable(fit_diff, genelist = annot[rownames(X),"SYMBOL"], p.value = 0.001, lfc = 3, number = nrow(X))
+
+```
+
+
+
+
+
+
+
+```{r lecture, echo=FALSE}
+PATHDATA <- "~/Enseignements/TP-Genomique-Marie-Anne/data"
+my_M_norm <- read.csv(paste(PATHDATA, "data2_M.txt", sep="/"), stringsAsFactors = F)
+probes <- as.character(my_M_norm[, 1])
+my_M_norm <- as.matrix(my_M_norm[, -1])
+pheno <- read.csv(paste(PATHDATA, "pheno.txt", sep="/"), row.names=1)
+M_cy3 <- my_M_norm[,pheno$dye == "Cy3"]
+M_cy3 <- M_cy3[, sort(colnames(M_cy3))]
+M_cy5 <- my_M_norm[,pheno$dye == "Cy5"]
+M_cy5 <- M_cy5[, sort(colnames(M_cy5))]
+M_ds <-  M_cy3 - M_cy5
+my_ma_q <- normalizeBetweenArrays(M_ds, method = "quantile")
+pheno_ds <- read.csv(paste(PATHDATA, "pheno_ds.txt", sep="/"))
+y <- pheno_ds$prodiff
+
+X <- my_ma_q
+colnames(X) <- gsub("_3","", colnames(X))
+
+# Attention, opération dangereuse : on enlèves les sondes CTRL à la main
+toremove <- which(probes %in% c("ctr1_ACTB","ctr2_GAPDH","_EMPTY_",
+                  "A10_0E02", "A10_0E04", "A10_0E06", "A1_0A01", "A1_0A03", "A2_0A02", 
+                  "A2_0A04", "A2_0A06", "A3_0B01", "A3_0B03", "A3_0B05", "A4_0B02", 
+                  "A4_0B04", "A4_0B06", "A5_0C01", "A5_0C03", "A6_0C02", "A6_0C04", 
+                  "A6_0C06", "A7_0D01", "A7_0D03", "A7_0D05", "A8_0D02", "A8_0D04", 
+                  "A8_0D06", "A9_0E01", "A9_0E03", "A9_0E05", "B1'_0B08", "B1'_0B12", 
+                  "B1_0E07", "B1_0E09", "B1_0E11", "B2'_0C07", "B2'_0C09", "B2'_0C11", 
+                  "B2_0E08", "B2_0E10", "B2_0E12", "B3'_0C08", "B3'_0C10", "B3'_0C12", 
+                  "B3_0F07", "B3_0F09", "B3_0F11", "B4'_0D07", "B4'_0D09", "B4'_0D11", 
+                  "B4_0F08", "B4_0F10", "B4_0F12", "B5'_0D08", "B5'_0D10", "B5'_0D12", 
+                  "B5_0G07", "B5_0G09", "B5_0G11", "E1_0G08", "E1_0G10", "E1_0G12", 
+                  "E2_0H07", "E2_0H09", "E2_0H11", "E3_0H08", "E3_0H10", "E3_0H12", 
+                  "I1_0F01", "I1_0F03", "I1_0F05", "I2_0F02", "I2_0F04", "I2_0F06", 
+                  "I3_0G01", "I3_0G03", "I3_0G05", "I4_0G04", "I4_0G06", "I5_0H01", 
+                  "I5_0H03", "I5_0H05", "I6_0H02", "I6_0H04", "I6_0H06", "I7_0A07", 
+                  "I7_0A09", "I7_0A11", "I8_0A08", "I8_0A10", "I8_0A12", "I9_0B07", 
+                  "I9_0B09", "I9_0B11"))
+
+X <- X[-toremove,]
+probes <- probes[-toremove]
+
+# Et on les met en rownames
+rownames(X) <- probes
+
+galinfo <- read.Galfile(galfile = "AWS.gal", path=PATHDATA, skip = 133, stringsAsFactors = F)
+a <- galinfo$gnames@maInfo$Name
+annot1 <- sapply(strsplit(a, ";S="), function(el) el[1])
+annot2 <- sapply(strsplit(a, ";S="), function(el) el[2])
+annot <- data.frame(SONDE=annot1, REFSEQ=annot2, stringsAsFactors = F)
+annot <- subset(annot, !duplicated(SONDE))
+rownames(annot) <- annot$SONDE
+
+require(org.Hs.eg.db)
+id_refseq <- as.character(annot[rownames(X), "REFSEQ"])
+
+# Get the entrez gene identifiers that are mapped to any SYMBOL
+tmp_symb <- org.Hs.egSYMBOL
+symb <- as.list(tmp_symb[mappedkeys(tmp_symb)])
+rm(tmp_symb) ; gc()
+
+# Get the entrez gene identifiers that are mapped to any RefSeq ID
+tmp_refseq <- org.Hs.egREFSEQ2EG
+refseq <- as.list(tmp_refseq[mappedkeys(tmp_refseq)])
+rm(tmp_refseq) ; gc()
+
+symboltab <- data.frame(EG=names(symb), SYMBOL=unlist(symb), stringsAsFactors = F)  
+refseqtab <- data.frame(EG=unlist(refseq), REFSEQ=names(refseq), stringsAsFactors = F)
+BIGANNOT <- merge(symboltab, refseqtab, by="EG") 
+rownames(BIGANNOT) <- BIGANNOT$REFSEQ
+
+annot <- data.frame(annot[rownames(X),], BIGANNOT[id_refseq, ], stringsAsFactors = F)
+
+# On enlève les sondes non annotées donc les contrôles et les Spiked In
+X_0 <- X
+X <- X_0[na.omit(annot)$SONDE,]
+
+```
+
+```{r}
+targets <- data.frame(fileName=pheno$ID, 
+                      Cy3 = ifelse(pheno$dye=="Cy3", as.character(pheno$prodiff), "REF"), 
+                      Cy5 = ifelse(pheno$dye=="Cy5", as.character(pheno$prodiff), "REF"))
+design <- modelMatrix(targets, ref="REF")
+contrasts <- makeContrasts(DiffvsProlif = Diff - Prolif, levels=design)
+my_M_norm_q <- normalizeBetweenArrays(my_M_norm, method = "quantile")
+MM <- as.matrix(my_M_norm[,-1])
+rownames(MM) <- probes
+fit2 <- lmFit(MM, design)
+fit2 <- contrasts.fit(fit2, contrasts)
+fit2 <- eBayes(fit2)
+top2 <- topTable(fit2, coef="DiffvsProlif", genelist = annot[probes,"REFSEQ"], lfc=1.3, p.value=1e-7, number = +Inf)
+write.table(top2, file="toptable_sans_dye_swap_norm.tsv", sep="\t")
+```
+
+
+
+
+```{r}
+load("~/Enseignements/TP-Genomique-Marie-Anne/data/3pm_loess_quantile_095_list.Rdata")
+X.q_J0 <- X.q[[1]]
+X.q_J7 <- X.q[[7]]
+X <- cbind(X.q_J0, X.q_J7)
+y <- c(rep("prolif", 6), rep("diff", 6))
+library(limma)
+targets <- data.frame(FileName = colnames(X), Targets = y)
+design <- data.frame(prolif=2-as.numeric(targets$Targets),
+diff=as.numeric(targets$Targets)-1)
+rownames(design) <- colnames(X)
+fit <- lmFit(X, design = design)
+cont.matrix <- makeContrasts(DiffvsProlif=diff-prolif, levels=design)
+fit2 <- contrasts.fit(fit, cont.matrix)
+fit2 <- eBayes(fit2)
+annotationSondesHUOLI1 <- read.delim("~/Enseignements/TP-Genomique-Marie-Anne/data/annotationSondesHUOLI1.csv")
+top <- topTable(fit2, adjust="BH", genelist = annotationSondesHUOLI1, number = +Inf, p.value = 0.05, lfc = 0.6)
+write.table(top, file="norm_SGF_limma_DiffvsProlif_p005_lfc06.csv", sep="\t", quote=F)
+```
+
+
+```{r}
+pval <- apply(X, 1, function(x) t.test(x~y)$p.value)
+padj <- p.adjust(pval, "BH")
+
+logfc <- function(u, g) {
+  v <- 2^u
+  fc2 <- Reduce("/",tapply(v, g, mean))
+  return(log2(fc2))
+}
+lfc <- apply(X, 1, logfc, y)
+
+i <- which((abs(lfc) >= 2) & (padj < 0.05))
+
+rownames(annotationSondesHUOLI1) <- annotationSondesHUOLI1$ProbeID
+
+diffgenes <- data.frame(LOGFC=lfc[i], PVAL=padj[i], annotationSondesHUOLI1[rownames(X)[i],] )
+o <- order(diffgenes$PVAL)
+diffgenes[o[1:10],]
+
+write.table(top, file="norm_TTEST_DiffvsProlif_p005_lfc06.csv", sep="\t", quote=F)
+
+require(DescTools)
+PlotVenn(list(LIMMA=as.character(top$SYMBOL), TTest=as.character(diffgenes$SYMBOL)))
+
+```
+
+

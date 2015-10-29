@@ -216,14 +216,15 @@ Nous allons visualiser la proximité relative des observations, grâce à une __
 > **Question** : Centrez les données à l'aide de la fonction `scale()`. Calculez les composantes grâce à la fonction `prcomp`. Combien y a-t-il de composantes ? Représentez graphiquement les observations en fonction des deux premières composantes, colorez les points en fonction de la colonne "dye" et changez la forme des points (paramètre `pch` de la fonction `plot`) en fonction de la colonne "prodiff" du tableau de données "pheno". Incluez le graphe directement sans passer par un fichier annexe. Que constatez-vous ?
 
 ```{r ACP_dye-swap, echo=TRUE}
-M_centered <- scale(my_M_norm, center=T, scale=FALSE)
+M_centered <- scale(t(my_M_norm), center=T, scale=FALSE)
 
-M_acp <- prcomp(t(M_centered), retx = T)
+M_acp <- prcomp(M_centered, retx = T)
 
 plot(M_acp$x[, "PC2"]~M_acp$x[, "PC1"], 
      main="Analyse en Composantes Principales\nInversion de fluorochromes", 
-     col=as.numeric(as.factor(pheno$dye)), xlab="PC1", ylab="PC2", 
+     col=-as.numeric(as.factor(pheno$dye))+4, xlab="PC1", ylab="PC2", 
      pch=as.numeric(as.factor(pheno$prodiff))+14, cex=2)
+legend("top", c("Cy3","Cy5","Diff","Prolif"), col=c("green","red","black","black"), pch=c(1,1,15:16), cex=2, bty="n")
 
 ```
 
@@ -283,12 +284,9 @@ Nous allons procéder à la normalisation des __quantiles__, grâce à la foncti
 library(limma)
 ?normalizeBetweenArrays
 
-my_ma <- new("MAList")
-my_ma[["M"]] <- M_ds
-my_ma[["A"]] <- A_ds
-my_ma_q <- normalizeBetweenArrays(my_ma, method = "quantile")
+my_ma_q <- normalizeBetweenArrays(M_ds, method = "quantile")
 
-boxplot(my_ma_q[["M"]], main="Boxplot M quantile norm data", 
+boxplot(my_ma_q, main="Boxplot M quantile norm data", 
         las=2, col=palette(rainbow(3)))
 abline(h=0)
 
@@ -300,17 +298,18 @@ Les données sont à présent normalisées et prêtes à l'emploi. Le fichier `p
 
 ```{r acp_dye-swap_norm, echo=T}
 
-M_centered <- scale(my_ma_q[["M"]], center=T, scale=FALSE)
+M_centered <- scale(t(my_ma_q), center=T, scale=FALSE)
 
-M_acp <- prcomp(t(M_centered), retx = T)
+M_acp <- prcomp(M_centered, retx = T)
 
 pheno_ds <- read.csv(paste(PATHDATA, "pheno_ds.txt", sep="/"))
 
 plot(M_acp$x[, "PC2"]~M_acp$x[, "PC1"], 
      main="Analyse en Composantes Principales - Dye-swap + Quantile", 
      col=as.numeric(as.factor(pheno_ds$ID)), 
-     pch=as.numeric(as.factor(pheno_ds$prodiff))+15, 
+     pch=as.numeric(as.factor(pheno_ds$prodiff))+14, 
      cex=2, xlab="PC1", ylab="PC2")
+legend("top", c("I1","I2","I3","Diff","Prolif"), col=c(rainbow(3),"black","black"), pch=c(1,1,1,15:16), cex=2, bty="n")
 
 ```
 
