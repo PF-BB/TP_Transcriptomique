@@ -1,6 +1,6 @@
 ---
 title: "TP Transcriptome : Analyse de données de puces à ADN"
-subtitle: "Partie 3 : Interprétation des Résultats"
+subtitle: "Partie 3 : Classification, annotation fonctionnelle et interprétation des résultats"
 author: "Vincent Guillemot, Cathy Philippe, Marie-Anne Debily"
 date: "November 6, 2015"
 output: pdf_document
@@ -23,17 +23,21 @@ Le kératinocyte passe donc d’un état prolifératif dans la couche basale à 
 
 # Objectif de la troisième partie du TP
 
-L’objectif de cette troisième partie est d'interpréter les résultats de l'analyse différentielle des puces à ADN. Cette analyse différentielle a permis de mettre en évidence les gènes différentiellement exprimés entre des cellules d'épiderme humain en phase de prolifération et des cellules en phase de différentiation.
+L’objectif de cette troisième partie est d'interpréter les résultats de l'analyse différentielle des puces à ADN. Cette analyse différentielle a permis de mettre en évidence les gènes différentiellement exprimés entre des cellules d'épiderme humain en phase de prolifération et des cellules en phase de différenciation.
 
 # Rappels sur les fichiers *R Markdown*
 
 Pour écrire votre rapport, nous vous conseillons fortement d'écrire un nouveau fichier *R Markdown* (`.rmd`). Vous fusionnerez ensuite les trois fichiers dans votre rapport final.
 
-# Liste des gènes à interpréter
+# Sélection des gènes différentiellement exprimés à analyser
 
-En jouant sur les seuils de *fold change* et de p-valeur, vous allez déterminer la liste des gènes différentiellement exprimés entre l'état de prolifération et celui de différenciation des kératinocytes humains, pour laquelle vous allez faire une interprétation biologique.
+En jouant sur les seuils de *fold change* et de p-valeur, vous allez déterminer la liste des gènes différentiellement exprimés entre l'état de prolifération et celui de différenciation des kératinocytes humains, pour laquelle vous allez faire une annotation fonctionnelle afin d'interpréter biologiquement les résultats.
 
-> **Question 1** : Générez à nouveau un *volcano plot* en appliquant les seuils suivants : logFC = 1 et p-valeur ajustée = 0.001. Interpétez cette figure. Récupérez la matrice des données normalisée correspondante aux gènes respectant ces seuils. Combien de gènes sont sous-exprimés ? Combien sont sur-exprimés ? Stockez-les dans deux matrices différentes.
+> **Question 1** : Générez à nouveau un *volcano plot* en appliquant les seuils suivants : logFC = 1 et p-valeur ajustée = 0.001. Interprétez cette figure. 
+
+Récupérez la matrice des données normalisée correspondante aux gènes respectant ces seuils. 
+
+> **Question 2** : Combien de gènes sont sous-exprimés ? Combien sont sur-exprimés ? Stockez-les dans deux matrices différentes.
 
 ```{r seuils}
 load("~/Enseignements/TP-Genomique-Marie-Anne/resultats_analyse_diff_ttest.Rdata")
@@ -100,8 +104,11 @@ X_dw <- X[as.character(topT$ProbeID[which(topT$logFC <(-1) & topT$adj.P.Val<0.00
 
 ```
 
+# Classification des données
 
-> **Question 2** : En utilisant la fonction `pheatmap()` du package `pheatmap`, générez un clustering hiérarchique assorti d'une carte de chaleur pour la matrice regroupant les sous- et les sur-exprimés avec la corrélation de Pearson comme distance et la méthode `average`. Interprétez le regroupement des observations.
+En utilisant la fonction `pheatmap()` du package `pheatmap`, générez un clustering hiérarchique assorti d'une carte de chaleur pour la matrice regroupant les gènes sous- et les sur-exprimés au cours de la différenciation, en utilisant la corrélation de Pearson comme distance et `average` comme critère d'agrégation. 
+
+> **Question 3** : Analysez le regroupement des observations.
 
 ```{r clustering}
 X_both <- rbind(X_up, X_dw)
@@ -130,12 +137,10 @@ Figure 3 : Clustering hiérarchique et carte de chaleur des gènes différentiel
 \end{center}
 
 
-
 # Annotation des sondes
+Afin de pouvoir procéder à l'annotation fonctionnelle, vous devez préalablement modifier les identifiants de votre liste de gènes. Les identifiants sont de la forme `NM_123456_789`. La première partie (`NM_123456`) correspond à l'identifiant GenBank du gène correspondant tandis que la seconde partie (`_789`) correspond à la position de la sonde sur le transcrit. Nous allons utiliser ces identifiants pour annoter les sondes en termes de fonction, grace à Gene Ontology.
 
-Les nom des sondes sont de la forme `NM_123456_789`. La première partie (`NM_123456`) correspond à l'identifiant GenBank du gène correspondant tandis que la seconde partie (`_789`) correspond à la position de la sonde sur le gène. Nous allons utiliser ces identifiants pour annoter les sondes en terme de fonction, grace à Gene Ontology.
-
-> **Question 3** : En utilisant la fonction `gsub()`, récupérez les identifiants GenBank pour chaque sonde. Annotez les sondes différentiellement exprimées avec ces identifiants. Suggestion : uitlisez une expression régulière avec l'option `perl=TRUE`.
+> **Question 4** : En utilisant la fonction `gsub()`, récupérez les identifiants GenBank pour chaque sonde. Annotez les sondes différentiellement exprimées avec ces identifiants. Suggestion : utilisez une expression régulière avec l'option `perl=TRUE`.
 
 ```{r GenBank}
 gb_up <- gsub(x = rownames(X_up), pattern = "(_[0-9]+$)", perl = TRUE, replacement = "")
@@ -146,8 +151,61 @@ X_dw <- cbind(GenBank = gb_dw, X_dw)
 
 ```
 
-# TOPPGENES
+# Recherche bibliographique
 
-# PUBMED ou GeneCards
+> **Question 5** : Quels sont les 2 gènes les plus induits et les deux gènes les plus réprimés au cours de la différenciation des kératinocytes ? Sont-ils déjà connus comme impliqués dans la différenciation de l’épiderme ? Vous pouvez vous aidez de la base de données de référence de la littérature biomédicale Pubmed (http://www.ncbi.nlm.nih.gov/pubmed).
+
+* CXCL1 Gene(Protein Coding)
+Chemokine (C-X-C Motif) Ligand 1 (Melanoma Growth Stimulating Activity, Alpha)
+
+* TFPI2 : tissue Factor Pathway Inhibitor 2
+rien de connu dans diff & prolif & peau
+
+* TMEM45A : implication dans kératinisation épidermique
+"High TMEM45A expression is correlated to epidermal keratinization.
+Hayez A, Malaisse J, Roegiers E, Reynier M, Renard C, Haftek M, Geenen V, Serre G, Simon M, de Rouvroit CL, Michiels C, Poumay Y." Exp Dermatol. 2014 May;23(5):339-44. doi: 10.1111/exd.12403.
+
+* KRT23 : implication dans prolif/diff autres types cellulaires
+
+        + "Keratin 23 (K23), a novel acidic keratin, is highly induced by histone deacetylase inhibitors during differentiation of pancreatic cancer cells."
+        + "Keratin23 (KRT23) knockdown decreases proliferation and affects the DNA damage response of colon cancer cells."
+
+# Analyse de sur-représentation de catégories GO
+
+> **Question 6** : Réaliser une analyse de sur-représentation de catégories GO indépendamment pour les gènes significativement différentiellement surexprimés et sous-exprimés dans les cellules en différenciation vs. prolifération en utilisant l’outil ToppFun (https://toppgene.cchmc.org/enrichment.jsp). Choississez les identifiants Refseq (*Entry type*) et un seuil de p-valeur de 0,01.
+
+> **Question 7** : Quels sont les 3 processus biologiques les plus enrichis en termes de significativité parmi les gènes surexprimés? Et les gènes sous-exprimés? 
+
+> **Question 8** : Quelles sont les trois voies de signalisation de la base de données **KEGG** significativement enrichies, si on considère les gènes réprimés pendant la différenciation ?
 
 # Visualisation de Pathways
+
+Nous vous proposons de visualiser en détail la modulation des gènes d'une de ces voies de signalisation.
+
+Installez le package Bioconductor `pathview` : 
+
+1. Sourcez le script `biocLite.R`, qui se trouve à l'URL http://www.bioconductor.org/biocLite.R.
+2. Utilisez le script pour installez le package `pathview` : `> biocLite("pathview")`. Le script installe automatiquement les dépendances du package.
+3. Visualisez la "vignette" : `> browseVignettes(package = "pathview")`
+
+> **Question 8** : Quelles sont les sondes différentiellement exprimées au seuil de p-valeurs ajustées de 1% ? Quels sont les logFC correspondants ? Construisez une matrice d'une colonne contenant ces logFC. Les noms de rang de cette matrice seront les symbols correspondant aux sondes.
+
+```{r seuil 1%}
+sondes_p001 <- as.character(topT$ProbeID[which(topT$adj.P.Val < 0.01)])
+symb <- annotationSondesHUOLI1[sondes_p001, "SYMBOL"]
+top_lfc <- matrix(topT[sondes_p001, "logFC"], nrow=length(sondes_p001))
+rownames(top_lfc) <- symb
+
+```
+
+
+> **Question 9** : A l'aide de la fonction `pathview()` du package que vous venez d'installer, visualisez le *pathway* du cycle cellulaire chez l'Homme de la base de connaissance **KEGG**, en affichant le logFC pour les gènes différentiellement exprimés au seuil de 1%, dans votre jeu de données.
+
+```{r visu cell cycle pathway, eval=FALSE}
+library(pathview)
+pv.out <- pathview(gene.data = top_lfc, pathway.id = "hsa04110", gene.idtype = "SYMBOL")
+
+```
+![cellCyclePathway](hsa04110_pathview.png)
+
+> **Question 10** : Quel gène semble jouer en role central dans le controle de cette voie de signalisation ? Est-il différentiellement exprimé dans votre analyse ? Quelle hypothèse pouvez-vous faire pour expliquer cette observation ?
