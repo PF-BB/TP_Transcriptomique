@@ -11,7 +11,7 @@ require(limma)
 require(marray)
 ```
 
-```{r lecture, echo=FALSE}
+```{r lecture1, echo=FALSE}
 PATHDATA <- "~/Enseignements/TP-Genomique-Marie-Anne/data"
 my_M_norm <- read.csv(paste(PATHDATA, "data2_M.txt", sep="/"), stringsAsFactors = F)
 probes <- as.character(my_M_norm[, 1])
@@ -143,18 +143,27 @@ colfac <- data.frame(Individu=substr(nstr,1,2),
                      Stade=substr(nstr,3,3), 
                      Replicat=substr(nstr,5,5),
                      row.names = nstr)
+png("heatmap_diff_prolif_p005_lfc2_euclidean_complete.png", w=29.7, h=21, units = "cm", res=300)
+pheatmap(t(Xdiff),annotation_row = colfac, scale = "column")
+dev.off()
 
-pheatmap(t(Xdiff),annotation_row = colfac, cellwidth = 9, cellheight = 9)
+png("heatmap_diff_prolif_p005_lfc2_pearson_average.png", w=29.7, h=21, units = "cm", res=300)
+pheatmap(t(Xdiff),annotation_row = colfac, clustering_distance_rows = "correlation", clustering_distance_cols = "correlation", clustering_method = "average", scale = "column")
+dev.off()
+
+
 ```
 
 
  
-```{r}
+```{r test_prolif, eval=FALSE}
 pval_prolif <- apply(X, 1, function(x) t.test(x[y=="Prolif"],mu = 0)$p.value)
 padj_prolif <- p.adjust(pval_prolif, "bonferroni")
 pval_prolif <- apply(X, 1, function(x) t.test(x[y=="Prolif"])$p.value)
 padj_prolif <- p.adjust(pval_prolif, "bonferroni")
+```
 
+```{r log_fold_change, eval=TRUE}
 logfc <- function(u, g) {
   v <- 2^u
   fc2 <- Reduce("/",tapply(v, g, mean))
@@ -175,7 +184,7 @@ PlotVenn(list(LIMMA=top$ID, TTest=diffgenes$SYMBOL))
 ```
 
 
-```{r}
+```{r limma_diff_prolif}
 fit_prolif  <- lmFit(X[,y=="Prolif"])
 fit_prolif <- eBayes(fit_prolif)
 top_prolif <- topTable(fit_prolif, genelist = annot[rownames(X),"SYMBOL"], p.value = 0.001, lfc = 3, number = nrow(X))
@@ -306,6 +315,12 @@ fit2 <- eBayes(fit2)
 annotationSondesHUOLI1 <- read.delim("~/Enseignements/TP-Genomique-Marie-Anne/data/annotationSondesHUOLI1.csv")
 top <- topTable(fit2, adjust="BH", genelist = annotationSondesHUOLI1, number = +Inf, p.value = 0.05, lfc = 0.6)
 write.table(top, file="norm_SGF_limma_DiffvsProlif_p005_lfc06.csv", sep="\t", quote=F)
+top <- topTable(fit2, adjust="BH", genelist = annotationSondesHUOLI1, number = +Inf, p.value = 0.01, lfc = 1)
+write.table(top, file="norm_SGF_limma_DiffvsProlif_p001_lfc1.csv", sep="\t", quote=F)
+top <- topTable(fit2, adjust="BH", genelist = annotationSondesHUOLI1, number = +Inf, p.value = 0.001, lfc = 1)
+write.table(top, file="norm_SGF_limma_DiffvsProlif_p0001_lfc1.csv", sep="\t", quote=F)
+
+
 ```
 
 
@@ -320,7 +335,7 @@ logfc <- function(u, g) {
 }
 lfc <- apply(X, 1, logfc, y)
 
-i <- which((abs(lfc) >= 2) & (padj < 0.05))
+i <- which((abs(lfc) >= 1) & (padj < 0.001))
 
 rownames(annotationSondesHUOLI1) <- annotationSondesHUOLI1$ProbeID
 
@@ -328,7 +343,7 @@ diffgenes <- data.frame(LOGFC=lfc[i], PVAL=padj[i], annotationSondesHUOLI1[rowna
 o <- order(diffgenes$PVAL)
 diffgenes[o[1:10],]
 
-write.table(top, file="norm_TTEST_DiffvsProlif_p005_lfc06.csv", sep="\t", quote=F)
+write.table(diffgenes[o,], file="norm_TTEST_DiffvsProlif_p0001_lfc1.csv", sep="\t", quote=F)
 
 require(DescTools)
 PlotVenn(list(LIMMA=as.character(top$SYMBOL), TTest=as.character(diffgenes$SYMBOL)))

@@ -310,3 +310,24 @@ plot(M_acp$x[, "PC2"]~M_acp$x[, "PC1"],
 ## 4. Classification hierarchique
 
 > **Question** : Produisez une **Heat Map** des données après sélection des gènes différentiellement exprimés. Sur ce graphe doit également un arbre de classification. Expliquez la commande utilisée et joignez la figure.
+
+```{r}
+
+X.q_J0 <- X.q[[1]]
+X.q_J7 <- X.q[[7]]
+X <- cbind(X.q_J0, X.q_J7)
+y <- c(rep("prolif", 6), rep("diff", 6))
+library(limma)
+targets <- data.frame(FileName = colnames(X), Targets = y)
+design <- data.frame(prolif=2-as.numeric(targets$Targets), diff=as.numeric(targets$Targets)-1)
+rownames(design) <- colnames(X)
+fit <- lmFit(X, design = design)
+cont.matrix <- makeContrasts(DiffvsProlif=diff-prolif, levels=design)
+fit2 <- contrasts.fit(fit, cont.matrix)
+fit2 <- eBayes(fit2)
+annotationSondesHUOLI1 <- read.delim("/media/philippe/3433-3231/DiffKerato/listes/Marie-Anne/annotationSondesHUOLI1.csv")
+top <- topTable(fit2, adjust="BH", genelist = annotationSondesHUOLI1, number = +Inf, p.value = 0.05, lfc = 0.6)
+write.table(top, file="norm_SGF_limma_DiffvsProlif_p005_lfc06.csv", sep="\t", quote=F)
+
+```
+
