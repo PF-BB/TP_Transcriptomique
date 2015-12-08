@@ -1,0 +1,128 @@
+---
+title: "Correction du TP ``Analyse différentielle'' "
+author: "Vincent Guillemot"
+output: pdf_document
+header-includes: \usepackage{graphicx}
+---
+
+```{r preambule, echo=FALSE, message=FALSE, warning=FALSE}
+require(ggplot2)
+require(pheatmap)
+```
+
+> **Question 1** : Quelles sont les dimensions de chacun des objets ?
+
+La lecture des données (sous format `RData`) se fait avec la commande `load`, qui prend comme argument le chemin du fichier : 
+
+```{r lectureDonnées}
+load("~/Dropbox/donnees_analyse_diff_2015-29-10.RData")
+```
+
+La liste des objets chargés en mémoire depuis ce fichier `RData` est :
+
+```{r}
+(obj <- ls())
+```
+
+Le tableau suivant résume la classe et la taille de ces objets :
+
+```{r tabdata, echo=FALSE, results='asis'}
+foo <- function(x) {
+  x <- get(x)
+  c("Classe" = sprintf("`%s`",class(x)), 
+    "Nombre de lignes" = NROW(x), 
+    "Nombre de colonnes" = NCOL(x))
+}
+tabdim <- sapply(obj, foo )
+knitr::kable(tabdim)
+```
+
+> **Question 2** : Calculez le logFC du groupe `prolif` par rapport au groupe `diff`. Représentez de manière synthétique à l'aide d'un diagramme en bâtons le nombre de gènes sur- et sous- exprimés dans le groupe `prolif` par rapport au groupe `diff` (prenez un seuil de 1).
+
+Le calcul du *log fold-change* peut s'effectuer par exemple à l'aide de la procédure ci-dessous. Le vecteur de résultat est appelé `lfc`. Le nombre de gènes sous- et sur-exprimés est représenté de manière synthétique en Figure \ref{fig:logfc_fig}.
+
+```{r logfc}
+Xexp <- 2^as.matrix(X)
+Mprolif <- rowMeans(Xexp[,y =="prolif"])
+Mdiff <- rowMeans(Xexp[,y =="diff"])
+lfc <- log(Mprolif/Mdiff)
+```
+
+```{r logfc_fig, echo=FALSE, fig.cap="Diagramme synthétique représentant les gènes sous- et sur-exprimés dans le groupe prolif par rapport au groupe diff.", fig.align="center"}
+datalfc <- data.frame(Nature=c("Sous-exp.", "Sur-exp.") , Effectif=c(sum(lfc < -1), sum(lfc > 1)))
+qplot(data=datalfc, x=Nature, y=Effectif, 
+      geom="bar", stat="identity", fill=Nature, main="Nombre de transcrits sous- et sur-exprimés \n (en termes de Fold-Change uniquement).") + 
+      scale_fill_manual(values=c("darkolivegreen4", "firebrick"), breaks=c(0, 1))  +
+      annotate("text", x=1, y=datalfc[1,2]-30, label=datalfc[1,2], colour="white", size=9) +
+      annotate("text", x=2, y=datalfc[2,2]-30, label=datalfc[2,2], colour="white", size=9) +
+      theme(legend.position = "none",
+            panel.background = element_blank(),
+            axis.ticks = element_blank(), 
+            axis.text.y = element_blank(), 
+            axis.title = element_blank())
+```
+
+
+> **Question 3** : Calculez pour toutes les sondes (*ie* les lignes de `X`) les *p-values* d'un test de Student comparant les deux moyennes des groupes `prolif` et `diff` en utilisant la fonction `t.test` et ses paramètres par défaut. Combien de ces *p-values* sont-elles en dessous du seuil classique de 0.05 ?
+
+Le calcul de toutes les p-valeurs pour tous les transcrits peut par exemple s'effectuer de la manière suivante :
+
+```{r pval, cache=TRUE}
+pval <- apply(X, 1, function(x) t.test(x~y)$p.value)
+```
+
+En résumé, `r sum(pval < 0.05)` de ces p-valeurs sont en dessous du seuil classique de 0.05.
+
+> **Question 4** : Utilisez sur le vecteur des *p-values* calculées précédemment la procédure `p.adjust` en attribuant à l'argument `method` la valeur `"BH"`. Après correction, combien de *p-values* ajustées se trouvent en dessous du seuil de 0.05 ?
+
+En suivant les indications de l'énoncé, on applique la correction pour les tests multiples de la façon suivante :
+
+```{r padj}
+padj <- p.adjust(pval, "BH")
+```
+
+En résumé, `r sum(padj < 0.05)` des p-valeurs ajustées sont en dessous du seuil classique de 0.05.
+
+Cela fait beaucoup de transcrits potentiellement différentiellement exprimés entre les deux classes. On va donc combiner les deux filtres : le filtre sur le *log fold-change* pour obtenir des gènes significatifs sur le plan technique, et le filtre sur la p-valeur pour avoir des gènes significatifs sur le plan statistique.
+
+> **Question 5.1** : Combien de sondes passent un seuil en logFC de 1 et un seuil sur la *p-value* ajustée de 0.05 ?
+
+Le nombre de transcrits différentiellement exprimés sur ces critères est de `r sum((abs(lfc) >= 1) & (padj < 0.05))`.
+
+> **Question 5.2** : Faites une représentation en volcan de votre analyse différentielle (avec la fonction `plot`). Représentez sur ce graphe les seuils sur le logFC et la *p-value* ajustée (avec la fonction `abline`). Représentez de deux couleurs différentes les sondes sur- et sous-exprimées (avec l'argument `col` de la fonction `plot`). Ajoutez sur ce graphe le nombre de sondes sur- et sous-exprimées dans une légende.
+
+La représentation "en volcan" se trouve en Figure \ref{fig:volcan}. Elle permet de s'assurer que les deux classes (prolifération et différenciation) sont bien différentes en un seul coup d’œil. 
+
+```{r volcan, echo=FALSE, fig.cap="Représentation en volcan de l'analyse différentielle.", fig.align='center'}
+c1 <- lfc < -1
+c2 <- lfc > 1
+c3 <- padj < 0.05
+
+sousexp <- (c1) & (c3)
+surexp <- (c2) & (c3)
+
+coltranscrits <- rep("grey", length(lfc))
+coltranscrits[sousexp] <- "darkolivegreen4"
+coltranscrits[surexp]  <- "firebrick"
+
+plot(lfc, -log10(padj), pch=16, col=coltranscrits, xlab="Log fold-change")
+grid()
+abline(h=-log10(0.05), lty=2, lwd=2, col="skyblue")
+abline(v=1 , lty=2, lwd=2, col="firebrick")
+abline(v=-1, lty=2, lwd=2, col="darkolivegreen4")
+legend("bottomright", c(sprintf("%i transcrits sous-exp.", sum(sousexp)),
+                        sprintf("%i transcrits sur-exp.", sum(surexp))), 
+       col=c("darkolivegreen4", "firebrick"), pch=16, bty="n")
+```
+
+> **Question 5.3** : Enfin, représentez à l'aide de la fonction `pheatmap` une représentation des mesures d'expression (contenue dans la matrice `X`) uniquement pour les transcrits différentiellement exprimés, et dont la légende contient les informations contenues dans le fichier `pheno2.tsv`.
+
+Enfin, une représentation par carte de chaleur (ou encore *heatmap*) (cf Fig. \ref{fig:pheatmap}) permet de s'assurer visuellement et de manière très synthétique que l'analyse différentielle permet bien d'identifier des groupes de gènes caractéristiques des deux classes.
+
+```{r pheatmap, echo=FALSE, fig.cap="Représentation en Heatmap des gènes différentiellement exprimés.", fig.align='center'}
+i <- which(sousexp | surexp)
+Xdiff <- X[i, ]
+annot <- read.table("~/Dropbox/pheno2.tsv", sep="\t", header=TRUE, row.names=1)
+
+pheatmap(t(Xdiff), color = colorRampPalette(c("darkolivegreen4", "grey", "firebrick"))(30), scale = "column", annotation_row = annot, show_colnames = F, show_rownames = F, cellheight = 10 )
+```
